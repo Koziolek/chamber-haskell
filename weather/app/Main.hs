@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Main where
 
 import Domain
@@ -25,8 +27,8 @@ fetchPort = asks _port
 
 askQuestion :: (MonadIO m ) => String -> m String
 askQuestion question = do
-    lifIO $ putStrLn question
-    lifIO $ getLine
+    liftIO $ putStrLn question
+    liftIO $ getLine
 
 -- cityByName :: String -> City
 -- cityByName str = City str
@@ -36,8 +38,7 @@ cityByName "Cadiz" = return $ City "Cadiz"
 cityByName "Londyn" = return $ City "Londyn"
 cityByName name = throwError $ UnknownCity name
 
-askFetch :: (
-            MonadReader Config m,
+askFetch :: (MonadReader Config m,
             MonadIO m,
             MonadError Error m
     ) => m ()
