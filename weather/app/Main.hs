@@ -2,11 +2,20 @@ module Main where
 
 import Domain
 import Lib
+import Control.Monad
 import Control.Monad.Reader
+import Control.Monad.Except
 import Data.Functor.Identity
 
 main :: IO ()
-main = return ()
+main = do
+    let config = Config "host" 8080
+    result <- runExceptT $ runReaderT program config
+    handleResult result
+        where
+            program = forever askFetch
+            handleResult (Right _) = return ()
+            handleResult (Left error) = putStrLn $ show error
 
 fetchHost :: Reader Config Host
 fetchHost = asks _host
@@ -27,15 +36,15 @@ cityByName "Cadiz" = Right $ City "Cadiz"
 cityByName "Londyn" = Right $ City "Londyn"
 cityByName name = Left $ UnknownCity name
 
-type Effect e = ReaderT Config IO e
+type Effect e = ReaderT Config (ExceptT Error IO) e
 
 askFetch :: Effect ()
 askFetch = do
-    cityName <- lift $ askQuestion "What is next city?"
-    city <- cityByName cityName
+    cityName <- (lift.lift) $ askQuestion "What is next city?"
+    city <- lift $ ExceptT ( return $ cityByName cityName )
     host <- mapReaderT (\ i -> return $ runIdentity i ) fetchHost
     port <- mapReaderT (       return . runIdentity ) fetchPort
 --     let host = ""
 --     let port = 8080
-    forecast <- lift $ thirdParty host port city
-    lift $ putStrLn $ "Forecast for city " ++ show city ++ " is " ++ show forecast
+    forecast <- (lift.lift) $ thirdParty host port city
+    (lift.lift) $ putStrLn $ "Forecast for city " ++ show city ++ " is " ++ show forecast

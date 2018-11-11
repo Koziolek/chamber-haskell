@@ -7,3 +7,4 @@ data Config= Config {
     _port :: Port
 }
 data Error = UnknownCity String
+    deriving Show

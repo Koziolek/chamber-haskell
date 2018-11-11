@@ -2,6 +2,7 @@ module Lib where
 
 data City = City String
     deriving Show
+
 data Temp = Temp Int
     deriving Show
 
