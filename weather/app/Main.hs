@@ -17,34 +17,34 @@ main = do
             handleResult (Right _) = return ()
             handleResult (Left error) = putStrLn $ show error
 
-fetchHost :: Reader Config Host
+fetchHost :: (MonadReader Config m) => m Host
 fetchHost = asks _host
 
-fetchPort :: Reader Config Port
+fetchPort :: (MonadReader Config m) => m Port
 fetchPort = asks _port
 
-askQuestion :: String -> IO String
+askQuestion :: (MonadIO m ) => String -> m String
 askQuestion question = do
-    putStrLn question
-    getLine
+    lifIO $ putStrLn question
+    lifIO $ getLine
 
 -- cityByName :: String -> City
 -- cityByName str = City str
-cityByName :: String -> Either Error City
-cityByName "Wrocław" = Right $ City "Wrocław"
-cityByName "Cadiz" = Right $ City "Cadiz"
-cityByName "Londyn" = Right $ City "Londyn"
-cityByName name = Left $ UnknownCity name
+cityByName :: (MonadError Error m ) => String -> m City
+cityByName "Wrocław" = return $ City "Wrocław"
+cityByName "Cadiz" = return $ City "Cadiz"
+cityByName "Londyn" = return $ City "Londyn"
+cityByName name = throwError $ UnknownCity name
 
-type Effect e = ReaderT Config (ExceptT Error IO) e
-
-askFetch :: Effect ()
+askFetch :: (
+            MonadReader Config m,
+            MonadIO m,
+            MonadError Error m
+    ) => m ()
 askFetch = do
-    cityName <- (lift.lift) $ askQuestion "What is next city?"
-    city <- lift $ ExceptT ( return $ cityByName cityName )
-    host <- mapReaderT (\ i -> return $ runIdentity i ) fetchHost
-    port <- mapReaderT (       return . runIdentity ) fetchPort
---     let host = ""
---     let port = 8080
-    forecast <- (lift.lift) $ thirdParty host port city
-    (lift.lift) $ putStrLn $ "Forecast for city " ++ show city ++ " is " ++ show forecast
+    cityName <- askQuestion "What is next city?"
+    city <- cityByName cityName
+    host <- fetchHost
+    port <- fetchPort
+    forecast <- liftIO $ thirdParty host port city
+    liftIO $ putStrLn $ "Forecast for city " ++ show city ++ " is " ++ show forecast
